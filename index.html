@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>ADHD Reader</title>
+
+<link rel="stylesheet" href="styles.css">
+
+</head>
+<body>
+
+<div id="controls">
+    <textarea id="textInput" placeholder="Paste your text here..."></textarea>
+    <button id="playBtn">▶ Play</button>
+    <button id="speedBtn">⚡ Speed</button>
+    <div id="sliderContainer">
+        <span id="wpmLabel">300 WPM</span>
+        <input type="range" id="wpmSlider" min="100" max="1000" step="50" value="300">
+    </div>
+</div>
+
+<div id="reader">
+    <div id="wordDisplay" class="word"></div>
+</div>
+
+<script>
+let words = [];
+let index = 0;
+let timer = null;
+let wpm = 300;
+let playing = false;
+
+const textInput = document.getElementById("textInput");
+const playBtn = document.getElementById("playBtn");
+const speedBtn = document.getElementById("speedBtn");
+const sliderContainer = document.getElementById("sliderContainer");
+const wpmSlider = document.getElementById("wpmSlider");
+const wpmLabel = document.getElementById("wpmLabel");
+const reader = document.getElementById("reader");
+const wordDisplay = document.getElementById("wordDisplay");
+const controls = document.getElementById("controls");
+
+/* ---------- ORP ---------- */
+function getORPIndex(word) {
+    const len = word.length;
+    if (len <= 2) return 0;
+    if (len <= 5) return 1;
+    if (len <= 9) return 2;
+    return 2;
+}
+
+function renderWord(word) {
+    const orpIndex = getORPIndex(word);
+    const before = word.slice(0, orpIndex);
+    const orp = word[orpIndex] || "";
+    const after = word.slice(orpIndex + 1);
+
+    wordDisplay.innerHTML =
+        `<span>${before}</span><span class="orp">${orp}</span><span>${after}</span>`;
+}
+
+/* ---------- TIMING ---------- */
+function getWordDelay(word) {
+    let effectiveWpm = wpm;
+
+    if (word.length > 6) {
+        effectiveWpm = Math.round(wpm * 0.8); // linger on long words
+    }
+
+    return 60000 / effectiveWpm;
+}
+
+function playNextWord() {
+    if (!playing) return;
+
+    if (index >= words.length) {
+        stopReading();
+        return;
+    }
+
+    const word = words[index];
+    renderWord(word);
+    index++;
+
+    const delay = getWordDelay(word);
+    timer = setTimeout(playNextWord, delay);
+}
+
+/* ---------- READER CONTROL ---------- */
+function startReading() {
+    words = textInput.value.trim().split(/\s+/);
+    if (!words.length) return;
+
+    index = 0;
+    playing = true;
+
+    reader.style.display = "flex";
+    controls.style.display = "none";
+    reader.classList.remove("paused");
+
+    playNextWord();
+}
+
+function stopReading() {
+    clearTimeout(timer);
+    timer = null;
+    playing = false;
+
+    reader.style.display = "none";
+    controls.style.display = "flex";
+    reader.classList.remove("paused");
+}
+
+/* ---------- UI ---------- */
+playBtn.onclick = startReading;
+
+speedBtn.onclick = () => {
+    sliderContainer.style.display =
+        sliderContainer.style.display === "flex" ? "none" : "flex";
+};
+
+wpmSlider.oninput = () => {
+    wpm = Number(wpmSlider.value);
+    wpmLabel.textContent = `${wpm} WPM`;
+};
+
+/* ---------- TEXTAREA AUTO-GROW ---------- */
+function autoGrow(textarea) {
+    textarea.style.height = "auto";
+    textarea.style.height = textarea.scrollHeight + "px";
+}
+
+textInput.addEventListener("input", () => autoGrow(textInput));
+
+wpmLabel.textContent = `${wpm} WPM`;
+
+/* ---------- KEYBOARD ---------- */
+document.addEventListener("keydown", (e) => {
+    // EXIT (always)
+    if (e.code === "Escape") {
+        e.preventDefault();
+        stopReading();
+        return;
+    }
+
+    // PLAY / PAUSE
+    if (e.code === "Space") {
+        e.preventDefault();
+
+        if (playing) {
+            clearTimeout(timer);
+            timer = null;
+            playing = false;
+            reader.classList.add("paused");
+        } else {
+            playing = true;
+            reader.classList.remove("paused");
+            playNextWord();
+        }
+        return;
+    }
+
+    // WORD NAVIGATION (paused only)
+    if (!playing) {
+        if (e.code === "ArrowLeft") {
+            e.preventDefault();
+            if (index > 0) {
+                index--;
+                renderWord(words[index]);
+            }
+        }
+
+        if (e.code === "ArrowRight") {
+            e.preventDefault();
+            if (index < words.length) {
+                renderWord(words[index]);
+                index++;
+            }
+        }
+    }
+});
+</script>
+
+</body>
+</html>
