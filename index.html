@@ -12,7 +12,7 @@
 <div id="controls">
     <textarea id="textInput" placeholder="Paste your text here..."></textarea>
     <button id="playBtn">▶ Play</button>
-    <button id="speedBtn">⚡ Speed</button>
+    <button id="speedBtn">⚡</button>
     <div id="sliderContainer">
         <span id="wpmLabel">300 WPM</span>
         <input type="range" id="wpmSlider" min="100" max="1000" step="50" value="300">
@@ -136,15 +136,17 @@ wpmLabel.textContent = `${wpm} WPM`;
 
 /* ---------- KEYBOARD ---------- */
 document.addEventListener("keydown", (e) => {
-    // EXIT (always)
-    if (e.code === "Escape") {
+    const readerActive = reader.style.display === "flex";
+
+    // EXIT reader (only when reader is active)
+    if (e.code === "Escape" && readerActive) {
         e.preventDefault();
         stopReading();
         return;
     }
 
-    // PLAY / PAUSE
-    if (e.code === "Space") {
+    // PLAY / PAUSE (only when reader is active)
+    if (e.code === "Space" && readerActive) {
         e.preventDefault();
 
         if (playing) {
@@ -160,8 +162,8 @@ document.addEventListener("keydown", (e) => {
         return;
     }
 
-    // WORD NAVIGATION (paused only)
-    if (!playing) {
+    // WORD NAVIGATION (only when paused + reader active)
+    if (readerActive && !playing) {
         if (e.code === "ArrowLeft") {
             e.preventDefault();
             if (index > 0) {
@@ -179,6 +181,7 @@ document.addEventListener("keydown", (e) => {
         }
     }
 });
+
 </script>
 
 </body>
