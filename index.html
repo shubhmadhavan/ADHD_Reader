@@ -26,11 +26,12 @@
     <div id="wordDisplay" class="word"></div>
 </div>
 
+
 <script>
 let words = [];
 let index = 0;
 let timer = null;
-let wpm = 225;
+let wpm = 300;
 let playing = false;
 
 const textInput = document.getElementById("textInput");
@@ -56,16 +57,15 @@ function renderWord(rawWord) {
     let word = rawWord;
     let hasDot = false;
 
-    // ✅ detect existing full stop
     if (word.endsWith(".")) {
         hasDot = true;
         word = word.slice(0, -1);
     }
 
-    const orpIndex = getORPIndex(word);
-    const before = word.slice(0, orpIndex);
-    const orp = word[orpIndex] || "";
-    const after = word.slice(orpIndex + 1);
+    const i = getORPIndex(word);
+    const before = word.slice(0, i);
+    const orp = word[i] || "";
+    const after = word.slice(i + 1);
 
     const dot = hasDot
         ? `<span style="color: cyan;">.</span>`
@@ -81,17 +81,11 @@ function renderWord(rawWord) {
 /* ---------- TIMING ---------- */
 function getWordDelay(word) {
     let effectiveWpm = wpm;
-
-    if (word.length > 6) {
-        effectiveWpm = Math.round(wpm * 0.8);
-    }
+    if (word.length > 6) effectiveWpm = Math.round(wpm * 0.8);
 
     let delay = 60000 / effectiveWpm;
 
-    // ✅ extra 400ms if word ends with full stop
-    if (word.endsWith(".")) {
-        delay += 400;
-    }
+    if (word.endsWith(".")) delay += 400;
 
     return delay;
 }
@@ -108,8 +102,7 @@ function playNextWord() {
     renderWord(word);
     index++;
 
-    const delay = getWordDelay(word);
-    timer = setTimeout(playNextWord, delay);
+    timer = setTimeout(playNextWord, getWordDelay(word));
 }
 
 /* ---------- READER CONTROL ---------- */
@@ -150,6 +143,8 @@ wpmSlider.oninput = () => {
     wpmLabel.textContent = `${wpm} WPM`;
 };
 
+wpmLabel.textContent = `${wpm} WPM`;
+
 /* ---------- TEXTAREA AUTO-GROW ---------- */
 function autoGrow(textarea) {
     textarea.style.height = "auto";
@@ -157,8 +152,6 @@ function autoGrow(textarea) {
 }
 
 textInput.addEventListener("input", () => autoGrow(textInput));
-
-wpmLabel.textContent = `${wpm} WPM`;
 
 /* ---------- KEYBOARD ---------- */
 document.addEventListener("keydown", (e) => {
@@ -187,24 +180,67 @@ document.addEventListener("keydown", (e) => {
     }
 
     if (readerActive && !playing) {
-        if (e.code === "ArrowLeft") {
+        if (e.code === "ArrowLeft" && index > 0) {
             e.preventDefault();
-            if (index > 0) {
-                index--;
-                renderWord(words[index]);
-            }
+            index--;
+            renderWord(words[index]);
         }
 
-        if (e.code === "ArrowRight") {
+        if (e.code === "ArrowRight" && index < words.length) {
             e.preventDefault();
-            if (index < words.length) {
-                renderWord(words[index]);
-                index++;
-            }
+            renderWord(words[index]);
+            index++;
         }
     }
 });
+
+/* ---------- TOUCH CONTROLS (3×3 GRID) ---------- */
+reader.addEventListener("touchstart", (e) => {
+    if (reader.style.display !== "flex") return;
+
+    const touch = e.touches[0];
+    const x = touch.clientX / window.innerWidth;
+    const y = touch.clientY / window.innerHeight;
+
+    e.preventDefault();
+
+    // TOP LEFT or TOP RIGHT → exit
+    if (y < 0.33 && (x < 0.33 || x > 0.66)) {
+        stopReading();
+        return;
+    }
+
+    // BOTTOM LEFT → previous word
+    if (y > 0.66 && x < 0.33) {
+        if (index > 1) {
+            index -= 2;
+            renderWord(words[index]);
+        }
+        return;
+    }
+
+    // BOTTOM RIGHT → next word
+    if (y > 0.66 && x > 0.66) {
+        if (index < words.length) {
+            renderWord(words[index]);
+            index++;
+        }
+        return;
+    }
+
+    // ANYWHERE ELSE → pause / resume
+    if (playing) {
+        clearTimeout(timer);
+        playing = false;
+        reader.classList.add("paused");
+    } else {
+        playing = true;
+        reader.classList.remove("paused");
+        playNextWord();
+    }
+}, { passive: false });
 </script>
+
 
 
 </body>
