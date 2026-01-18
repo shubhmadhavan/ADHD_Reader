@@ -107,20 +107,18 @@ input[type="range"] {
 
 @media (max-width: 1268px) {
 
-
     body {
     touch-action: manipulation;
-    
-}
+    }
 
    #controls button {
-    min-height: 44px; /* Apple HIG */
-    padding: 12px 16px;
+    min-height: 32px; /* Apple HIG */
+    padding: 12px 2px;
 }
 
    textarea,
 #textInput {
-    min-height: 80px;
+    min-height: 220px;
     line-height: 1.5;
 }
     #sliderContainer {
@@ -131,6 +129,7 @@ input[type="range"] {
         width: 100%;
     }
 }
+
 
 /* Extra small phones */
 @media (max-width: 480px) {
