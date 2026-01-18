@@ -27,7 +27,7 @@
 </div>
 
 <script>
-let units = [];
+let words = [];
 let index = 0;
 let timer = null;
 let wpm = 300;
@@ -48,94 +48,50 @@ function getORPIndex(word) {
     const len = word.length;
     if (len <= 2) return 0;
     if (len <= 5) return 1;
+    if (len <= 9) return 2;
     return 2;
 }
 
-/* ---------- PREPROCESS ---------- */
-function preprocessText(text) {
-    // YAML frontmatter
-    text = text.replace(/^---\s*\n[\s\S]*?\n---\s*\n?/, "");
-
-    // horizontal rules
-    text = text.replace(/^\s*---\s*$/gm, "");
-
-    // Obsidian embeds
-    text = text.replace(/!\[\[.*?\]\]/g, "(image)");
-
-    // Markdown images
-    text = text.replace(/!\[[^\]]*\]\([^)]+\)/g, "(image)");
-
-    // Tables
-    text = text.replace(/(?:^\s*\|.*\|\s*\n)+/gm, "(table)\n");
-
-    return text;
-}
-
-/* ---------- PARSE ---------- */
-function parseContent(text) {
-    text = preprocessText(text);
-    const lines = text.split("\n");
-    const result = [];
-
-    for (let line of lines) {
-        let trimmed = line.trim();
-        if (!trimmed) continue;
-
-        const startIndex = result.length;
-
-        trimmed
-            .replace(/\*\*\*|\*\*|\*|==|_/g, "")
-            .split(/\s+/)
-            .forEach(word => {
-                if (word) result.push({ content: word });
-            });
-
-        const lastChar = trimmed.slice(-1);
-        if (!/[,:.\-–+?]$/.test(lastChar)) {
-            for (let i = result.length - 1; i >= startIndex; i--) {
-                if (result[i]) {
-                    result[i].endDot = true;
-                    break;
-                }
-            }
-        }
-    }
-
-    return result;
-}
-
-/* ---------- RENDER ---------- */
-function renderWord(unit) {
-    let word = unit.content;
+function renderWord(rawWord) {
+    let word = rawWord;
     let hasDot = false;
 
+    // ✅ detect existing full stop
     if (word.endsWith(".")) {
         hasDot = true;
         word = word.slice(0, -1);
-        unit.endDot = true;
     }
 
-    const i = getORPIndex(word);
+    const orpIndex = getORPIndex(word);
+    const before = word.slice(0, orpIndex);
+    const orp = word[orpIndex] || "";
+    const after = word.slice(orpIndex + 1);
 
-    const dot = unit.endDot || hasDot
+    const dot = hasDot
         ? `<span style="color: cyan;">.</span>`
         : "";
 
     wordDisplay.innerHTML =
-        `<span>${word.slice(0, i)}</span>` +
-        `<span class="orp">${word[i] || ""}</span>` +
-        `<span>${word.slice(i + 1)}</span>` +
+        `<span>${before}</span>` +
+        `<span class="orp">${orp}</span>` +
+        `<span>${after}</span>` +
         dot;
 }
 
 /* ---------- TIMING ---------- */
-function getWordDelay(word, unit) {
-    let effective = wpm;
-    if (word.length > 6) effective *= 0.8;
+function getWordDelay(word) {
+    let effectiveWpm = wpm;
 
-    let delay = 60000 / effective;
+    if (word.length > 6) {
+        effectiveWpm = Math.round(wpm * 0.8);
+    }
 
-    if (unit?.endDot) delay += 800;
+    let delay = 60000 / effectiveWpm;
+
+    // ✅ extra 400ms if word ends with full stop
+    if (word.endsWith(".")) {
+        delay += 400;
+    }
 
     return delay;
 }
@@ -143,24 +99,24 @@ function getWordDelay(word, unit) {
 function playNextWord() {
     if (!playing) return;
 
-    if (index >= units.length) {
+    if (index >= words.length) {
         stopReading();
         return;
     }
 
-    const unit = units[index++];
-    renderWord(unit);
+    const word = words[index];
+    renderWord(word);
+    index++;
 
-    const delay = getWordDelay(unit.content, unit);
+    const delay = getWordDelay(word);
     timer = setTimeout(playNextWord, delay);
 }
 
 /* ---------- READER CONTROL ---------- */
 function startReading() {
-    let text = textInput.value.trim();
-    if (!text) return;
+    words = textInput.value.trim().split(/\s+/);
+    if (!words.length) return;
 
-    units = parseContent(text);
     index = 0;
     playing = true;
 
@@ -194,13 +150,15 @@ wpmSlider.oninput = () => {
     wpmLabel.textContent = `${wpm} WPM`;
 };
 
-wpmLabel.textContent = `${wpm} WPM`;
+/* ---------- TEXTAREA AUTO-GROW ---------- */
+function autoGrow(textarea) {
+    textarea.style.height = "auto";
+    textarea.style.height = textarea.scrollHeight + "px";
+}
 
-/* ---------- AUTO-GROW ---------- */
-textInput.addEventListener("input", () => {
-    textInput.style.height = "auto";
-    textInput.style.height = textInput.scrollHeight + "px";
-});
+textInput.addEventListener("input", () => autoGrow(textInput));
+
+wpmLabel.textContent = `${wpm} WPM`;
 
 /* ---------- KEYBOARD ---------- */
 document.addEventListener("keydown", (e) => {
@@ -214,14 +172,35 @@ document.addEventListener("keydown", (e) => {
 
     if (e.code === "Space" && readerActive) {
         e.preventDefault();
+
         if (playing) {
             clearTimeout(timer);
+            timer = null;
             playing = false;
             reader.classList.add("paused");
         } else {
             playing = true;
             reader.classList.remove("paused");
             playNextWord();
+        }
+        return;
+    }
+
+    if (readerActive && !playing) {
+        if (e.code === "ArrowLeft") {
+            e.preventDefault();
+            if (index > 0) {
+                index--;
+                renderWord(words[index]);
+            }
+        }
+
+        if (e.code === "ArrowRight") {
+            e.preventDefault();
+            if (index < words.length) {
+                renderWord(words[index]);
+                index++;
+            }
         }
     }
 });
