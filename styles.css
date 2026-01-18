@@ -9,6 +9,13 @@ body {
     flex-direction: column;
 }
 
+textarea,
+input,
+button {
+    font-size: 16px;
+}
+
+
 /* ---------- CONTROLS ---------- */
 #controls {
     display: flex;
@@ -72,7 +79,7 @@ input[type="range"] {
     align-items: center;
     justify-content: center;
 
-    font-size: clamp(64px, 18vw, 256px);
+    font-size: clamp(48px, 10vmin, 180px);
     background: black;
     user-select: none;
 }
@@ -98,20 +105,24 @@ input[type="range"] {
 /* ===================== MOBILE ============================ */
 /* ========================================================= */
 
-@media (max-width: 768px) {
+@media (max-width: 1268px) {
 
 
-    #controls button {
-        padding: 12px;
-        font-size: 16px;
-    }
+    body {
+    touch-action: manipulation;
+    
+}
 
-    textarea,
-    #textInput {
-        font-size: 16px; /* prevents iOS zoom */
-        max-height: 50vh;
-    }
+   #controls button {
+    min-height: 44px; /* Apple HIG */
+    padding: 12px 16px;
+}
 
+   textarea,
+#textInput {
+    min-height: 80px;
+    line-height: 1.5;
+}
     #sliderContainer {
         justify-content: space-between;
     }
