@@ -4,7 +4,7 @@ Speed Reader with Optimal Point highlights
 ### Preview
 <p align="left">
   <img
-    src="https://github.com/user-attachments/assets/7872980c-194e-48ef-a881-845ae92244a1"
+    src="https://github.com/user-attachments/assets/9fb72d11-6cd9-48dd-86c0-28ae7e3349b2"
     width="400"
     alt="ADHD Reader Preview"
   />
