@@ -107,7 +107,10 @@ function playNextWord() {
 
 /* ---------- READER CONTROL ---------- */
 function startReading() {
-    words = textInput.value.trim().split(/\s+/);
+    text = textInput.value.trim();
+    text = ". " + text;
+
+    words = text.split(/\s+/);
     if (!words.length) return;
 
     index = 0;
