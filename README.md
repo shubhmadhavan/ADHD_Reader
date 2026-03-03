@@ -1,4 +1,4 @@
-# ADHD_Reader
+# Optimal Point Reader
 Speed Reader with Optimal Point highlights
 
 ### Preview
